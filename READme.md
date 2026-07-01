@@ -46,6 +46,8 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 ```
 /
 ├── README.md
+├── constraints
+│   └── oledControl.xdc
 ├── docs/
 │   ├── 01_spi_controller.md
 │   ├── 02_ila_debugging.md
@@ -59,7 +61,7 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 │   └── oledControlp4/
 │       └── oledControlp4_2_0/
 │           ├── hdl/
-│           │   └── oledControlp4_slave_lite_v2_0_S00_AXI.v
+│           │   ├── oledControlp4_slave_lite_v2_0_S00_AXI.v
 │           │   └── oledControlp4.v
 │           └── src/
 │               ├── top.v
