@@ -8,7 +8,7 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 
 ---
 
-![ZedBoard Hello World](docs/images/ZedBoard_Hello_World.jpg)
+![ZedBoard Hello World](docs/images/OLED_Hello_World.jpg)
 
 ## Table of Contents
 
