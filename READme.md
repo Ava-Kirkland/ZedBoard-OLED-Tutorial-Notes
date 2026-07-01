@@ -60,6 +60,7 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 │       └── oledControlp4_2_0/
 │           ├── hdl/
 │           │   └── oledControlp4_slave_lite_v2_0_S00_AXI.v
+│           │   └── oledControlp4.v
 │           └── src/
 │               ├── top.v
 │               ├── oledControl.v
