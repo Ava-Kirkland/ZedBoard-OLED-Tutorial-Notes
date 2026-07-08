@@ -123,24 +123,36 @@ regenerate_bd_layout -routing
 ## 8. Methodology Warnings: TIMING-17 "Not Reached by a Timing Clock"
 
 **Tutorial:** Not documented.  
-**2025:** After implementation, the Methodology tab shows TIMING-17 Critical Warnings for registers inside `spiController` — "clock pin is not reached by a timing clock."
+**2025:** After implementation, the Methodology tab shows 17 TIMING-17 Critical Warnings for registers inside `spiController` — "clock pin is not reached by a timing clock."
 
-**Cause:** The `S_AXI_ACLK` clock interface on the custom IP lacks the `FREQ_HZ` parameter in its `component.xml` metadata. Without it, Vivado's static timing analysis cannot trace the clock through the IP boundary.
+**Cause:** The `S00_AXI_CLK` clock interface on the custom IP lacks the `FREQ_HZ` parameter in its `component.xml` metadata. Without it, Vivado's static timing analysis cannot trace the clock object from `FCLK_CLK0` through the IP boundary into the internal registers during out-of-context synthesis.
 
 **Impact:** The design functions correctly. Vivado simply cannot perform full timing verification on the SPI controller's internal registers. At 100 MHz with this design's timing margins (WNS = 2.778 ns post-implementation), this is not a functional risk.
 
-**Resolution:** Add `FREQ_HZ=100000000` to the AXI clock interface in the IP Packager's Ports and Interfaces tab, then repackage. This is a metadata fix only — it does not change hardware behavior.
+**Status:** These 17 warnings were investigated but not resolved. Two related IP packaging warnings exist alongside them:
+- `[IP_Flow 19-11770] Clock interface 'S00_AXI_CLK' has no FREQ_HZ parameter`
+- `[IP_Flow 19-4751] Bus Interface 'oled_spi_clk': FREQ_HZ bus parameter is missing for output clock interface`
+
+The `FREQ_HZ` parameter for `S00_AXI_CLK` is not accessible via the IP Packager GUI in Vivado 2025 — it does not appear in the Parameters tab of the Edit Interface dialog. A Tcl-based approach may be possible but has not been confirmed to resolve the downstream TIMING-17 warnings. The root cause is likely a missing OOC (out-of-context) clock constraint XDC file for the IP, which is a separate issue from the metadata parameter alone. This remains an open known limitation of this design.
 
 ---
 
 ## 9. TIMING-18 Warnings: Missing Output Delay on OLED Ports
 
 **Tutorial:** Not documented.  
-**2025:** Warnings that output delay constraints are missing on OLED output ports.
+**2025:** 5 warnings that output delay constraints are missing on OLED output ports (`oled_dc_n`, `oled_reset_n`, `oled_spi_clk`, `oled_vbat`, `oled_vdd`).
 
-**Cause:** Standard Vivado nag for top-level output ports without `set_output_delay` constraints.
+**Cause:** Vivado attempts to enforce clock-edge timing on these output ports because it cannot determine they are unrelated to the system clock. Without being told otherwise, Vivado's timing-driven router treats them as synchronous outputs that must meet a clock constraint.
 
-**Impact:** None. The OLED SSD1306's SPI interface runs at 10 MHz maximum. The 100 MHz Zynq fabric has more than adequate timing margin without explicit I/O delay constraints.
+**Impact:** In a standalone single-component OLED project, these warnings are cosmetic and the design functions. However, **if any other component is added to the project** (e.g., a temperature sensor on a Pmod), the OLED will stop working — Vivado's timing-driven router makes conflicting routing decisions for those output paths when it believes they must meet a clock constraint.
+
+**Fix:** Add `set_false_path` to the constraints file. This tells Vivado these signals have no timing relationship with any clock, which is correct — the OLED is a slow SPI peripheral, not a synchronous endpoint:
+
+```xdc
+set_false_path -to [get_ports {oled_dc_n oled_reset_n oled_spi_clk oled_vbat oled_vdd}]
+```
+
+This eliminates all 5 TIMING-18 warnings and makes the OLED compatible with multi-component projects. Add this line even if you are not currently combining the OLED with other components — it is the correct constraint for these signals regardless.
 
 ---
 
@@ -164,3 +176,25 @@ x/4xw 0x43C00000
 This prints four 32-bit words starting at the given address — all four AXI registers in one unambiguous output. This bypasses display-layer formatting issues that can make the Memory Inspector hard to interpret.
 
 When the debugger's output is ambiguous, fall back to `xil_printf` in your C code — it is always authoritative since the CPU itself is doing the read.
+
+---
+
+## 11. OLED Constraints Must Use `LVCMOS33`, Not `LVCMOS18`
+
+**Tutorial:** Uses `LVCMOS18` for all OLED port voltage standards.  
+**Impact when combining with other components:** Using `LVCMOS18` works for a standalone OLED-only project but causes a voltage conflict error as soon as any other component is added that shares bank 13.
+
+**Cause:** All OLED pins on the ZedBoard are on **I/O bank 13**, which is a 3.3V bank. The ZedBoard's Pmod connectors are also on bank 13 and also operate at 3.3V. A single I/O bank can only operate at one voltage — if any pin in the bank is declared `LVCMOS18` (1.8V) while the bank supplies 3.3V, or while another pin in the same bank is declared `LVCMOS33`, Vivado throws a bank voltage conflict error and the build fails.
+
+**Fix:** Use `LVCMOS33` for all OLED port `IOSTANDARD` constraints:
+
+```xdc
+set_property IOSTANDARD LVCMOS33 [get_ports oled_dc_n]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_reset_n]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_spi_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_spi_data]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_vbat]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_vdd]
+```
+
+Use `LVCMOS33` even in a standalone OLED project — it reflects the actual hardware voltage and prevents the error from appearing the moment you expand the design.
