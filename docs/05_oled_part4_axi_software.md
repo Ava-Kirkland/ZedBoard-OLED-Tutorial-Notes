@@ -59,6 +59,9 @@ The following changes are specific to Vivado 2025.2.1 and are **not shown in the
    - Interface: AXI4-Lite Slave
    - Number of registers: 4
 4. Choose **Edit IP** when prompted — this opens the IP project.
+5. Add the `.v` files from OLED Part 3.
+
+> **Before adding `oledControl.v`:** This file requires three fixes not shown in the tutorial — see `bugs_and_fixes.md` Bugs #6, #7, and #8. The fixes are three lines in the main `always @(posedge clock)` block. Without them the OLED works standalone but fails to initialize once combined with any other component (such as a Pmod TMP2 over IIC).
 
 After creation, verify in File Explorer that the IP is at the correct path before proceeding.
 

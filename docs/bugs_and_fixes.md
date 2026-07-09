@@ -219,3 +219,162 @@ xil_printf("reg0=%08x reg1=%08x reg2=%08x reg3=%08x\n",
 ```
 
 Insert this immediately before the polling loop, run without breakpoints, and read the UART output. The values are unambiguous — the CPU itself is doing the read and printing the literal 32-bit hex value, bypassing any debugger display layer. This single output was what revealed Bug #5 after all other approaches produced ambiguous results.
+
+---
+
+## Bugs #6–#8 — `oledControl.v` Hardware FSM Bugs
+
+These three bugs are in `oledControl.v` — the hardware OLED controller FSM — not in the AXI layer. The full timeline:
+
+1. The standalone OLED project worked correctly.
+2. When building a combinational project combining the OLED with a Pmod TMP2 temperature sensor (IIC interface) to display live temperature readings, the OLED failed to initialize. This is when debugging started.
+3. During debugging, `(* KEEP = "TRUE" *)` attributes were added to several signals as a diagnostic tool to prevent synthesis from removing suspect signals.
+4. Adding KEEP accidentally fixed the symptom — the OLED started initializing again — so the root cause was never fully investigated. The KEEP attributes stayed in the file as an unintentional band-aid.
+5. Further investigation revealed the underlying signal assignment issues. The three fixes below resolved the problem correctly and the KEEP attributes were removed.
+
+All three fixes are changes to the reset block and the top of the `else` block in the main `always @(posedge clock)` process.
+
+---
+
+## Bug #6 — Synthesis Pruning Signals, OLED Fails to Initialize
+
+**Symptom:** OLED does not initialize or turn on. `(* KEEP = "TRUE" *)` attributes were added to registers `startDelay`, `spiLoadData`, `nextState`, and `spiData` as a debugging step to keep suspect signals in the netlist — this accidentally made the OLED work, masking the root cause. The KEEP attributes stayed in the file as an unintentional band-aid until the issue resurfaced in a multi-component project.
+
+**Root cause:** Vivado's synthesis optimizer legally pruned signals it determined were not always driven. These registers were only written inside specific `case` branches — synthesis saw incomplete always-active paths and removed them from the netlist entirely. The OLED never received a valid initialization sequence as a result. `(* KEEP = "TRUE" *)` forced the signals to survive synthesis, masking the root cause rather than fixing it.
+
+> **General diagnostic tip (untested):** The **Synthesis Report → Removed Logic** section may list signals that were pruned with reasons. If you suspect synthesis is removing signals you expect to be present, checking that report may help identify the cause. This was not verified during this debugging session — the fix was applied directly.
+
+**Fix:** Add default assignments at the top of the `else` block, before the `case` statement. This gives synthesis a complete always-driven path every clock cycle. Individual states override only what they need:
+
+```verilog
+else begin
+    // Default assignments — pulse signals return low every cycle
+    // Synthesis will keep these signals because they are always driven
+    startDelay  <= 1'b0;
+    spiLoadData <= 1'b0;
+    // sendDone intentionally NOT here — see Bug #7
+    case(state)
+        ...
+    endcase
+end
+```
+
+Remove all `(* KEEP = "TRUE" *)` attributes after adding defaults — they are no longer needed and should never be used as a substitute for correct RTL.
+
+**Lesson:** `(* KEEP = "TRUE" *)` is a synthesis hint, not a fix. If removing it breaks your design, the design has incomplete signal assignments. Find the root cause.
+
+---
+
+## Bug #7 — `sendDone` Pulse Too Short for Software Polling
+
+**Symptom:** OLED initializes correctly. First call to `writeCharOled()` gets stuck in the polling loop forever — `slv_reg1` never goes nonzero.
+
+**Root cause:** `sendDone` was included in the default assignments block added to fix Bug #6:
+
+```verilog
+else begin
+    startDelay  <= 1'b0;
+    spiLoadData <= 1'b0;
+    sendDone    <= 1'b0;  // ← this was the problem
+    case(state)
+```
+
+This drove `sendDone` low on every single clock cycle. The `SEND_DATA` state correctly asserted `sendDone <= 1'b1` when all 8 bytes were sent — but the default on the next clock cycle immediately killed it. At 100 MHz the pulse lasted 10 ns. The software polling loop runs over hundreds of clock cycles. The pulse was gone before software ever read the register.
+
+**Key distinction:** `sendDone` is not a pulse signal — it is a hardware-to-software handshake level signal. It must stay asserted long enough for the ARM processor to observe it through the AXI-Lite interface.
+
+**Fix:** Remove `sendDone` from the defaults block. Let it hold its value. Clear it explicitly inside the `DONE` state, which is entered only after the FSM returns from `SEND_DATA` via `WAIT_SPI`:
+
+```verilog
+else begin
+    startDelay  <= 1'b0;
+    spiLoadData <= 1'b0;
+    // sendDone removed — holds its value until DONE state clears it explicitly
+    case(state)
+```
+
+`sendDone` lifecycle after fix:
+```
+SEND_DATA (last byte) → sendDone asserts HIGH
+WAIT_SPI              → sendDone holds HIGH
+DONE                  → sendDone driven LOW explicitly
+```
+
+Software reads HIGH during the `WAIT_SPI → DONE` window.
+
+**Lesson:** Done signals in hardware/software interfaces must be **level signals** — asserted and held until explicitly cleared, never single-cycle pulses and never in the defaults block. Software operates orders of magnitude slower than the FPGA clock. Any signal software must poll must stay asserted long enough to be seen.
+
+> **Rule:** If the consumer is software → level signal, never pulse, never in defaults.
+
+---
+
+## Bug #8 — `byteCounter` Not Initialized in Reset Block
+
+**Symptom:** No functional bug observed — `byteCounter` is written to `8` in the `DONE` state before it is ever used. However, Vivado may warn about uninitialized registers and power-up behavior is technically undefined.
+
+**Root cause:** `byteCounter` was added to the design after the reset block was originally written and was never added to it.
+
+**Fix:** Add to the reset block:
+
+```verilog
+byteCounter <= 4'd0;
+```
+
+**Lesson:** Every register should be explicitly initialized in reset, even if design logic writes it before first use. Prevents warnings, documents intent, and protects against future refactoring that changes the use order.
+
+---
+
+## The Three-Line Fix in `oledControl.v`
+
+All three bugs above are resolved by changes to a single section of `oledControl.v`. The relevant portion of the file after the fix:
+
+```verilog
+always @(posedge clock)
+begin
+    if(reset)
+    begin
+        state        <= IDLE;
+        nextState    <= IDLE;
+        oled_vdd     <= 1'b1;
+        oled_vbat    <= 1'b1;
+        oled_reset_n <= 1'b1;
+        oled_dc_n    <= 1'b1;
+        startDelay   <= 1'b0;
+        spiData      <= 8'b0;
+        spiLoadData  <= 1'b0;
+        currPage     <= 0;
+        sendDone     <= 0;
+        columnAddr   <= 0;
+        byteCounter  <= 4'd0;    // Bug #8 fix: added to reset block
+    end
+    else
+    begin
+        // Bug #6 fix: default assignments so synthesis keeps these signals
+        // Bug #7 fix: sendDone intentionally NOT here — it is a level signal,
+        //             not a pulse — must hold until DONE state clears it
+        startDelay  <= 1'b0;
+        spiLoadData <= 1'b0;
+        case(state)
+            ...
+        endcase
+    end
+end
+```
+
+---
+
+## Non-Bug Clarifications — `oledControl.v`
+
+These patterns in `oledControl.v` look suspicious but are intentional. Do not change them.
+
+**`WAIT_SPI` exits on `!spiDone`:**
+```verilog
+WAIT_SPI: begin
+    if(!spiDone)
+        state <= nextState;
+end
+```
+This looks like it exits before SPI completes, but it is intentional. The pattern is a two-phase handshake: the sending state waits for `spiDone` HIGH, then transitions to `WAIT_SPI`, which waits for `spiDone` to return LOW before moving on. This prevents the next state from seeing a stale `spiDone` HIGH from the previous transaction. Do not change this.
+
+**`currPage` increment pattern in `PAGE_ADDR1`:**
+`PAGE_ADDR1` sends `currPage` as the start address, increments it, then `PAGE_ADDR2` sends the incremented value as the end address. This is intentional — the SSD1306 `0x22` page address command takes a start and end page. This sets a two-page window. It is the designed page windowing behavior for the 4-page SSD1306 display.

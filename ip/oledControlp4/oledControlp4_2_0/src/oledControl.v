@@ -92,14 +92,18 @@ begin
         startDelay <= 1'b0;
         spiData <= 8'b0;
         spiLoadData <= 1'b0;
-        //spiDone <= 1'b0;
         //added for after initializationn sequence
         currPage <= 0;
         sendDone <= 0;
         columnAddr <= 0;
+//added to reset
+        byteCounter <= 4'd0;
     end   
     else
     begin
+//added to there is an initialized value for needed signals on first clock cycle to Synthesis will keep the signals
+        startDelay  <= 1'b0;
+        spiLoadData <= 1'b0;
         case(state)
             IDLE:begin
                 oled_vbat <= 1'b1;

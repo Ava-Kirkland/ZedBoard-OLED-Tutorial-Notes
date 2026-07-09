@@ -97,6 +97,45 @@ Before running synthesis or generating a bitstream, confirm that **`top.v` is se
 - Right-click `top.v` in the Sources panel → **Set as Top**.
 - If the top module is not set correctly, Vivado expects physical pin assignments for every port of whatever module it considers top — which will cause errors in synthesis and bitstream generation for ports that don't have XDC constraints.
 
+### Critical: `oledControl.v` Requires Fixes Beyond the Tutorial
+
+The `oledControl.v` built in this video series requires three fixes that are **not shown in the tutorial**. Without them, the OLED works correctly in a standalone project but **fails to initialize once combined with any other component** (such as a Pmod TMP2 temperature sensor over IIC). In a multi-component project the OLED will power on but the initialization sequence never completes — the display stays blank or shows garbage. See `bugs_and_fixes.md` Bugs #6, #7, and #8 for full detail.
+
+The changes are in the main `always @(posedge clock)` block:
+
+```verilog
+always @(posedge clock)
+begin
+    if(reset)
+    begin
+        state        <= IDLE;
+        nextState    <= IDLE;
+        oled_vdd     <= 1'b1;
+        oled_vbat    <= 1'b1;
+        oled_reset_n <= 1'b1;
+        oled_dc_n    <= 1'b1;
+        startDelay   <= 1'b0;
+        spiData      <= 8'b0;
+        spiLoadData  <= 1'b0;
+        currPage     <= 0;
+        sendDone     <= 0;
+        columnAddr   <= 0;
+        byteCounter  <= 4'd0;    // added to reset block
+    end
+    else
+    begin
+        // added: default assignments so synthesis keeps these signals
+        startDelay  <= 1'b0;
+        spiLoadData <= 1'b0;
+        case(state)
+            ...
+        endcase
+    end
+end
+```
+
+If your `oledControl.v` has `(* KEEP = "TRUE" *)` attributes on registers, that is a symptom of incomplete signal assignments — remove them after applying the fixes above.
+
 ### Debug: Use `<=` Everywhere in State Machines
 
 Every register assignment inside a clocked `always` block must use `<=` (non-blocking). Using `=` (blocking) even once in a state machine can prevent the OLED from turning on at all.
