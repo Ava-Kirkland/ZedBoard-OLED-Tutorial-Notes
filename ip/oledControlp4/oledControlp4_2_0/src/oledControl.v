@@ -101,7 +101,7 @@ begin
     end   
     else
     begin
-//added to there is an initialized value for needed signals on first clock cycle to Synthesis will keep the signals
+//added for there to be an initialized value for needed signals on first clock cycle to Synthesis will keep the signals
         startDelay  <= 1'b0;
         spiLoadData <= 1'b0;
         case(state)
