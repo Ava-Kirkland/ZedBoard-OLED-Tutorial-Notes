@@ -144,7 +144,7 @@ The `FREQ_HZ` parameter for `S00_AXI_CLK` is not accessible via the IP Packager 
 
 **Cause:** Vivado attempts to enforce clock-edge timing on these output ports because it cannot determine they are unrelated to the system clock. Without being told otherwise, Vivado's timing-driven router treats them as synchronous outputs that must meet a clock constraint.
 
-**Impact:** In a standalone single-component OLED project, these warnings are cosmetic and the design functions. However, **if any other component is added to the project** (e.g., a temperature sensor on a Pmod), the OLED will stop working — Vivado's timing-driven router makes conflicting routing decisions for those output paths when it believes they must meet a clock constraint.
+**Impact:** These warnings are cosmetic — the design functions correctly regardless of whether the OLED is standalone or combined with other components. The `set_false_path` constraint eliminates the warnings and reduces implementation time but is not required for correct operation.
 
 **Fix:** Add `set_false_path` to the constraints file. This tells Vivado these signals have no timing relationship with any clock, which is correct — the OLED is a slow SPI peripheral, not a synchronous endpoint:
 
@@ -152,7 +152,9 @@ The `FREQ_HZ` parameter for `S00_AXI_CLK` is not accessible via the IP Packager 
 set_false_path -to [get_ports {oled_dc_n oled_reset_n oled_spi_clk oled_vbat oled_vdd}]
 ```
 
-This eliminates all 5 TIMING-18 warnings and makes the OLED compatible with multi-component projects. Add this line even if you are not currently combining the OLED with other components — it is the correct constraint for these signals regardless.
+This eliminates all 5 TIMING-18 warnings and reduces implementation time. Add this line even if you are not currently combining the OLED with other components — it is the correct constraint for these signals regardless.
+
+> **Note:** If the OLED fails to initialize in a combined project, the root cause is more likely the `oledControl.v` synthesis pruning bugs — see `bugs_and_fixes.md` Bugs #6–#8. The `set_false_path` constraint addresses warnings only, not initialization failures.
 
 ---
 
