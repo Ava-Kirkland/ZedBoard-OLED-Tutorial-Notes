@@ -41,6 +41,13 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 
 ---
 
+## Related Projects
+
+- [`ZedBoard-OLED-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) - integrates this project with the Pmod TMP2 temperature sensor to display live temperature readings on the OLED
+- [`ZedBoard-Pmod-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-Pmod-TMP2) - standalone Pmod TMP2 project connected to JB of the ZedBoard
+
+---
+
 ## Recommended File Structure for Each Video's Project
 
 ```
