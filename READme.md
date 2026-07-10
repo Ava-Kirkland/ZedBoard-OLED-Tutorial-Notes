@@ -41,42 +41,6 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 
 ---
 
-## Repository Structure
-
-```
-/
-├── README.md
-├── constraints
-│   └── oledControl.xdc
-├── docs/
-│   ├── 01_spi_controller.md
-│   ├── 02_ila_debugging.md
-│   ├── 03_oled_parts_1_2_3.md
-│   ├── 04_hw_sw_codesign.md
-│   ├── 05_oled_part4_axi_software.md
-│   ├── bugs_and_fixes.md
-│   ├── vivado_2025_differences.md
-│   └── images/                  ← screenshots and photos referenced in notes
-├── ip_repo/
-│   └── oledControlp4/
-│       └── oledControlp4_2_0/
-│           ├── hdl/
-│           │   ├── oledControlp4_slave_lite_v2_0_S00_AXI.v
-│           │   └── oledControlp4.v
-│           └── src/
-│               ├── top.v
-│               ├── oledControl.v
-│               ├── spiController.v
-│               ├── delayGen.v
-│               └── charROM.v
-└── sw/
-    ├── oled.h
-    ├── oled.c
-    └── main.c
-```
-
----
-
 ## Recommended File Structure for Each Video's Project
 
 ```
