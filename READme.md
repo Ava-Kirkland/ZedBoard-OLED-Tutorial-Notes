@@ -45,6 +45,7 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 
 - [`ZedBoard-OLED-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) - integrates this project with the Pmod TMP2 temperature sensor to display live temperature readings on the OLED
 - [`ZedBoard-Pmod-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-Pmod-TMP2) - standalone Pmod TMP2 project connected to JB of the ZedBoard
+- [`ZedBoard-APP-BLE-OLED-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-APP-BLE-OLED-TMP2) - combining several standalone projects to develop an embedded system from Vivado to connecting to a custom app that displays the temperate
 
 ---
 
