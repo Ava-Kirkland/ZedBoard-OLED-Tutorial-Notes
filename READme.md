@@ -30,6 +30,25 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 - [docs/vitis_troubleshooting.md](docs/vitis_troubleshooting.md) — Quick-reference for Vitis errors, hangs, and debug techniques
 ---
 
+## Extended Version
+
+The OLED custom IP in this project has been extended with a software-controlled power-off and power-on sequence in ZedBoard-OLED-Addition.
+
+[ZedBoard-OLED-Addition](https://github.com/Ava-Kirkland/ZedBoard-OLED-Addition)
+
+The extension adds:
+
+- A dedicated power command register (reg3, offset 0x0C) to the AXI-Lite IP
+- A datasheet-compliant power-off and power-on FSM in oledControl.v
+- C driver functions oledPowerOff() and oledRepowerOn()
+
+If you want the OLED to power down cleanly during program execution — which the ZedBoard tutorial recommends to extend panel lifespan — use the IP from ZedBoard-OLED-Addition
+
+*Recommendation:* If you already know how to make a custom IP - go to ZedBoard-OLED-Addition. 
+Else if you are wanting to learn how to make a custom IP - start here and get it working, then go the extension version.
+
+---
+
 ## Other Resources
 
 | Resource | Link |
@@ -43,10 +62,14 @@ These notes document how to follow the ZedBoard OLED tutorial series on modern t
 
 ## Related Projects
 
-- [`ZedBoard-OLED-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) - integrates this project with the Pmod TMP2 temperature sensor to display live temperature readings on the OLED
-- [`ZedBoard-Pmod-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-Pmod-TMP2) - standalone Pmod TMP2 project connected to JB of the ZedBoard
-- [`ZedBoard-BLE`](https://github.com/Ava-Kirkland/ZedBoard-BLE) - standalone Pmod BLE project connected to JE of the ZedBoard
-- [`ZedBoard-APP-BLE-OLED-TMP2`](https://github.com/Ava-Kirkland/ZedBoard-APP-BLE-OLED-TMP2) - combining several standalone projects to develop an embedded system from Vivado to connecting to a custom app that displays the temperate
+| Project | Description | Link |
+|---|---|---|
+| ZedBoard OLED | Original OLED project with custom AXI-Lite IP (basis for this IP) | [ZedBoard-OLED-Tutorial-Notes](https://github.com/Ava-Kirkland/ZedBoard-OLED-Tutorial-Notes) |
+| ZedBoard Pmod TMP2 | ADT7420 temperature sensor over I2C | [ZedBoard-Pmod-TMP2](https://github.com/Ava-Kirkland/Zedboard-Pmod-TMP2) |
+| ZedBoard Pmod BLE | RN4871 UART bridge | [ZedBoard-BLE](https://github.com/Ava-Kirkland/ZedBoard-BLE) |
+| ZedBoard OLED + TMP2 | Combined OLED display with live temperature | [ZedBoard-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) |
+| ZedBoard APP BLE OLED TMP2 | Full multi-peripheral system — validated with this IP | [ZedBoard-APP-BLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-BLE-OLED-TMP2) |
+| **ZedBoard OLED Addition** | **This Project's Extention — power-off/on sequence extension to the OLED IP** | [ZedBoard-OLED-Addition](https://github.com/Ava-Kirkland/ZedBoard-OLED-Addition) |
 
 ---
 
