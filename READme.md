@@ -70,6 +70,8 @@ Else if you are wanting to learn how to make a custom IP - start here and get it
 | ZedBoard OLED + TMP2 | Combined OLED display with live temperature | [ZedBoard-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) |
 | ZedBoard APP BLE OLED TMP2 | Full multi-peripheral system — validated with this IP | [ZedBoard-APP-BLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-BLE-OLED-TMP2) |
 | **ZedBoard OLED Addition** | **This Project's Extention — power-off/on sequence extension to the OLED IP** | [ZedBoard-OLED-Addition](https://github.com/Ava-Kirkland/ZedBoard-OLED-Addition) |
+| ZedBoard AXI UARTLite | POC of AXI UARTLite sending a message through a Pmod BLE to a phone | [ZedBoard-AXI-UARTLite](https://github.com/Ava-Kirkland/ZedBoard-AXI-UARTLite) |
+| ZedBoard APP DualBLE OLED TMP2 | Dual BLE, Android + iOS simultaneously | [ZedBoard-APP-DualBLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-DualBLE-OLED-TMP2) |
 
 ---
 
